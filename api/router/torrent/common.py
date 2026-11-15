@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from shared.modules.libtorrentx import MagnetUtils
-from shared.factory import db, redis
+from shared.factory import db, redis, sync_db
 from shared.sockets import emit
 from ..files.status import get_disk_usage
 from .download_status import get_download_status
@@ -74,7 +74,7 @@ def update_to_db(props, user_id):
     emit(f"/stc/torrent-props-update/{props.get('info_hash')}", props, user_id)
     emit(f"/stc/disk-usage", get_disk_usage(str(user_id)), user_id)
     # emit(f"/stc/download_status", await get_download_status(user_id), user_id)
-    db.torrents.update_one(
+    sync_db.torrents.update_one(
         {"info_hash": props["info_hash"], "user_id": user_id}, {"$set": props}
     )
 
@@ -101,7 +101,7 @@ def update_to_db(props, user_id):
             def _index_finished_torrent():
                 try:
                     index_torrent_files_sync(str(user_id), props)
-                    cache_torrent_media_metadata_sync(db, str(user_id), props)
+                    cache_torrent_media_metadata_sync(sync_db, str(user_id), props)
                 except Exception:
                     traceback.print_exc()
 

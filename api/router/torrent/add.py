@@ -59,6 +59,13 @@ async def add_torrent(dto: MagnetDto, request: Request):
                 "info_hash": info_hash,
                 "user_id": ObjectId(user_id),
                 "magnet": dto.magnet,
+                "name": "Loading...",
+                "progress": 0,
+                "download_speed": 0,
+                "downloaded_bytes": 0,
+                "total_bytes": 0,
+                "is_paused": False,
+                "is_finished": False,
                 "created_at": datetime.datetime.now(),
             }
         )
@@ -116,6 +123,13 @@ async def add_torrent_file(request: Request, torrent: UploadFile = File(...)):
                     "info_hash": info_hash,
                     "user_id": ObjectId(user_id),
                     "magnet": magnet,
+                    "name": torrent.filename or "Loading...",
+                    "progress": 0,
+                    "download_speed": 0,
+                    "downloaded_bytes": 0,
+                    "total_bytes": 0,
+                    "is_paused": False,
+                    "is_finished": False,
                     "created_at": datetime.datetime.now(),
                 }
             )

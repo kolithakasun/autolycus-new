@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from router import ping, torrent, auth, files
 from shared.factory import db
 from shared.modules.file_search_index import schedule_missing_search_index_backfill
-from shared.sockets import sio_app
+from shared.sockets import bind_loop, sio_app
 from router.auth.ftp import refresh_ftp_friendly_roots
 import celery_worker
 
@@ -25,6 +25,7 @@ ftp_sync_task = None
 
 @app.on_event("startup")
 async def startup_backfill_search_index():
+    bind_loop(asyncio.get_running_loop())
     schedule_missing_search_index_backfill(db)
 
 

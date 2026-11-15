@@ -17,6 +17,7 @@ export default function AddTorrent() {
           .then((res) => {
             toast.success("Magnet added");
             setMagnetLink("");
+            window.dispatchEvent(new Event("autolycus-torrents-changed"));
           })
           .catch((err) => {
             toast.error("Unable to add magnet");
@@ -30,6 +31,7 @@ export default function AddTorrent() {
           .then((res) => {
             toast.success("URL added");
             setMagnetLink("");
+            window.dispatchEvent(new Event("autolycus-torrents-changed"));
           })
           .catch((err) => {
             toast.error("Unable to add URL");
@@ -44,6 +46,7 @@ export default function AddTorrent() {
           .then((res) => {
             toast.success("Magnet added");
             setMagnetLink("");
+            window.dispatchEvent(new Event("autolycus-torrents-changed"));
           })
           .catch((err) => {
             toast.error("Unable to add magnet");
@@ -73,6 +76,7 @@ export default function AddTorrent() {
       .then((res) => {
         toast.success("Torrent added");
         fileInput.current.value = null;
+        window.dispatchEvent(new Event("autolycus-torrents-changed"));
       })
       .catch((err) => {
         toast.error("Unable to add torrent");

@@ -70,6 +70,13 @@ def subscriber():
 
 threading.Thread(target=subscriber, daemon=True).start()
 
+_server_loop = None
+
+
+def bind_loop(loop):
+    global _server_loop
+    _server_loop = loop
+
 
 @sio.event
 async def connect(sid, environ, auth):
@@ -105,9 +112,15 @@ def emit(event_name, data, user_id):
             print(e)
 
     try:
-        # If there's a running event loop, use create_task
-        loop = asyncio.get_running_loop()
-        loop.create_task(_emit(event_name, data, user_id))
-    except Exception:
-        # If there's no running event loop, use asyncio.run
-        asyncio.run(_emit(event_name, data, user_id))
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+
+    if running is not None and running.is_running():
+        running.create_task(_emit(event_name, data, user_id))
+        return
+
+    if _server_loop is not None and _server_loop.is_running():
+        asyncio.run_coroutine_threadsafe(
+            _emit(event_name, data, user_id), _server_loop
+        )

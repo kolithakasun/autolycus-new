@@ -96,9 +96,13 @@ export default function TorrentList({ state, onPathChange, viewMode = "list" }) 
   useEffect(() => {
     const handleSocketUpdate = () => fetchTorrents();
     socket.on(socketRoutes.stcTorrentAddedOrRemoved, handleSocketUpdate);
+    window.addEventListener("autolycus-torrents-changed", handleSocketUpdate);
+    const refreshTimer = setInterval(handleSocketUpdate, 2000);
 
     return () => {
       socket.off(socketRoutes.stcTorrentAddedOrRemoved, handleSocketUpdate);
+      window.removeEventListener("autolycus-torrents-changed", handleSocketUpdate);
+      clearInterval(refreshTimer);
     };
   }, [socket, fetchTorrents]);
 
@@ -228,7 +232,7 @@ export default function TorrentList({ state, onPathChange, viewMode = "list" }) 
       >
         {torrentList.map((torrent) => (
           <div
-            key={torrent.id}
+            key={getTorrentKey(torrent)}
             onClick={() => handleTorrentClick(torrent)}
             onMouseEnter={() => handleTorrentMouseEnter(torrent)}
             className={`cursor-pointer ${

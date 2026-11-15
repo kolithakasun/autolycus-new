@@ -1,5 +1,6 @@
 import os
 import motor.motor_asyncio
+from pymongo import MongoClient
 from redis import Redis
 from .env import *
 from .modules.jackett import AsyncJackett
@@ -23,3 +24,7 @@ def get_db():
 
 
 db = get_db()
+
+# Background torrent callbacks run outside the API event loop, so they need a
+# synchronous client. Motor calls from those threads return unresolved futures.
+sync_db = MongoClient(MONGO_DATABASE_URI)[MONGO_DATABASE_NAME]
