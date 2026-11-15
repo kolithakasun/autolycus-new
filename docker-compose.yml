@@ -1,42 +1,81 @@
-include:
-  - ./docker-compose-services.yml
-
 services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    image: autolycus_api
-    container_name: autolycus_api
-    environment:
-      - API_DEBUG=False
-    env_file:
-      - ./.env
+  app:
+    build: .
+    ports:
+      - "8080:8080"
     volumes:
-      # - ./api:/app
       - ${DOWNLOADS_PATH:-./volumes/downloads}:/downloads
-    restart: always
-    depends_on:
-      - redis
-      - mongodb
-      - meilisearch
-    networks:
-      - autolycus_network
-
-  ui:
-    build:
-      context: ./ui
-      dockerfile: Dockerfile.prod
-    image: autolycus_ui
-    container_name: autolycus_ui
-    env_file:
-      - ./.env
     environment:
-      - BUILD_ENV=prod
-    # volumes:
-    #   - ./ui:/app
-    restart: always
+      API_DEBUG: "False"
+      API_SECRET_KEY: ${API_SECRET_KEY:-8d1f3e4d46d04f5fac089a8f980f1951}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-autolycus_session}
+      CELERY_NUM_WORKERS: ${CELERY_NUM_WORKERS:-2}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55}
+      MONGO_DATABASE_NAME: ${MONGO_DATABASE_NAME:-autolycus}
+      MONGO_DATABASE_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-autolycus}:${MONGO_INITDB_ROOT_PASSWORD:-1a7b8145ea854796851096ff8b05c84f}@mongodb:27017/${MONGO_DATABASE_NAME:-autolycus}?authSource=admin
+      MEILI_SEARCH_HOST: http://meilisearch:7700
+      MEILI_SEARCH_API_KEY: ${MEILI_SEARCH_API_KEY:-3150711a1a8e4af98515f832ddc1266d}
+      MEILI_SEARCH_INDEX_NAME_PREFIX: ${MEILI_SEARCH_INDEX_NAME_PREFIX:-autolycus}
+      MEILI_SEARCH_MAX_TOTAL_HITS: ${MEILI_SEARCH_MAX_TOTAL_HITS:-20000}
+      JACKETT_API_KEY: ${JACKETT_API_KEY:-5d1l7dh9720l34duhfdnmgtzppw2owvk}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      TMDB_READ_ACCESS_TOKEN: ${TMDB_READ_ACCESS_TOKEN:-}
     depends_on:
-      - api
-    networks:
-      - autolycus_network
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+      jackett:
+        condition: service_started
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:5.0
+    volumes:
+      - ./volumes/mongodb:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-autolycus}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-1a7b8145ea854796851096ff8b05c84f}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE_NAME:-autolycus}
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--username", "${MONGO_INITDB_ROOT_USERNAME:-autolycus}", "--password", "${MONGO_INITDB_ROOT_PASSWORD:-1a7b8145ea854796851096ff8b05c84f}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:6.2-alpine
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55}
+    volumes:
+      - ./volumes/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10.0
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_SEARCH_API_KEY:-3150711a1a8e4af98515f832ddc1266d}
+    volumes:
+      - ./volumes/meilisearch:/meili_data
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Etc/UTC
+      AUTO_UPDATE: "true"
+    volumes:
+      - ./api/jackett/config:/config
+    restart: unless-stopped

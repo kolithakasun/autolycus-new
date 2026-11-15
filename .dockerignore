@@ -1,0 +1,11 @@
+.git
+volumes
+data
+downloads
+images
+**/.env
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+api/jackett/config
