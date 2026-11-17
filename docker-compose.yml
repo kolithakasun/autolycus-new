@@ -1,15 +1,19 @@
+# Caps are sized for a 2 vCPU / 4 GB server and total about 3 GB.
 services:
   app:
     build: .
     ports:
       - "8080:8080"
+    mem_limit: 1400m
+    memswap_limit: 1400m
+    cpus: 1.00
     volumes:
       - ${DOWNLOADS_PATH:-./volumes/downloads}:/downloads
     environment:
       API_DEBUG: "False"
       API_SECRET_KEY: ${API_SECRET_KEY:-8d1f3e4d46d04f5fac089a8f980f1951}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-autolycus_session}
-      CELERY_NUM_WORKERS: ${CELERY_NUM_WORKERS:-2}
+      CELERY_NUM_WORKERS: ${CELERY_NUM_WORKERS:-1}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55}
@@ -35,6 +39,10 @@ services:
 
   mongodb:
     image: mongo:5.0
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.40
     volumes:
       - ./volumes/mongodb:/data/db
     environment:
@@ -51,7 +59,10 @@ services:
 
   redis:
     image: redis:6.2-alpine
-    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55}
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD:-12c3487bb85447ed99ea8689affd6d55} --maxmemory 96mb --maxmemory-policy allkeys-lru
+    mem_limit: 192m
+    memswap_limit: 192m
+    cpus: 0.15
     volumes:
       - ./volumes/redis:/data
     healthcheck:
@@ -65,6 +76,11 @@ services:
     image: getmeili/meilisearch:v1.10.0
     environment:
       MEILI_MASTER_KEY: ${MEILI_SEARCH_API_KEY:-3150711a1a8e4af98515f832ddc1266d}
+      MEILI_MAX_INDEXING_MEMORY: 200Mb
+      MEILI_MAX_INDEXING_THREADS: "1"
+    mem_limit: 384m
+    memswap_limit: 384m
+    cpus: 0.25
     volumes:
       - ./volumes/meilisearch:/meili_data
     restart: unless-stopped
@@ -76,6 +92,10 @@ services:
       PGID: "1000"
       TZ: Etc/UTC
       AUTO_UPDATE: "true"
+      DOTNET_GCHeapHardLimit: "0x18000000"
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.25
     volumes:
       - ./api/jackett/config:/config
     restart: unless-stopped
